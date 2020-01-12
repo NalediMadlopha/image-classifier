@@ -30,8 +30,8 @@ data_transforms = {
 
 # Load the datasets with ImageFolder
 image_datasets = {
-    "train": datasets.ImageFolder(args.data_dir, transform=data_transforms["train"]),
-    "valid": datasets.ImageFolder("flowers/valid", transform=data_transforms["test"])
+    "train": datasets.ImageFolder(args.data_dir + "train", transform=data_transforms["train"]),
+    "valid": datasets.ImageFolder(args.data_dir + "valid", transform=data_transforms["test"])
 }
 
 # Define the dataloaders, using the image dataset and the trainforms
@@ -41,30 +41,43 @@ dataloaders = {
 }
 
 # Define the pre-trained models
-resnet18 = models.resnet18(pretrained=True)
 alexnet = models.alexnet(pretrained=True)
 vgg16 = models.vgg16(pretrained=True)
 
-models = {'resnet': resnet18, 'alexnet': alexnet, 'vgg16': vgg16}
+models = {'alexnet': alexnet, 'vgg16': vgg16}
 model = models[args.arch]
 
 def main():
     for param in model.parameters():
         param.requires_grad = False
     
-    model.classifier = nn.Sequential(OrderedDict([
-        ('fc1', nn.Linear(25088, args.hidden_units)),
-        ('relu', nn.ReLU()),
-        ('dropout', nn.Dropout()),
-        ('fc2', nn.Linear(args.hidden_units, 102)),
-        ('output', nn.LogSoftmax(dim=1))
-    ]))
-
+    model.classifier = get_classifier(args.arch)
+    
     device = torch.device("cuda:0" if args.gpu and torch.cuda.is_available() else "cpu")
     model.to(device)
     
     train(model, args.epochs, 40, device)
 
+def get_classifier(arch):
+    switcher = {
+        "alexnet": nn.Sequential(OrderedDict([
+            ('fc1', nn.Linear(9216, args.hidden_units)),
+            ('relu', nn.ReLU()),
+            ('dropout', nn.Dropout()),
+            ('fc2', nn.Linear(args.hidden_units, 102)),
+            ('output', nn.LogSoftmax(dim=1))
+        ])),
+        "vgg16": nn.Sequential(OrderedDict([
+            ('fc1', nn.Linear(25088, args.hidden_units)),
+            ('relu', nn.ReLU()),
+            ('dropout', nn.Dropout()),
+            ('fc2', nn.Linear(args.hidden_units, 102)),
+            ('output', nn.LogSoftmax(dim=1))
+        ]))
+    }
+    
+    return switcher.get(arch, None)
+        
     
 def train(model, epochs, print_every, device):
     print(" --- TRAINING BEGIN --- ")
