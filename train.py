@@ -45,7 +45,7 @@ resnet18 = models.resnet18(pretrained=True)
 alexnet = models.alexnet(pretrained=True)
 vgg16 = models.vgg16(pretrained=True)
 
-models = {'resnet': resnet18, 'alexnet': alexnet, 'vgg': vgg16}
+models = {'resnet': resnet18, 'alexnet': alexnet, 'vgg16': vgg16}
 model = models[args.arch]
 
 def main():
@@ -53,7 +53,7 @@ def main():
         param.requires_grad = False
     
     model.classifier = nn.Sequential(OrderedDict([
-        ('fc1', nn.Linear(model.classifier[0].in_features, args.hidden_units)),
+        ('fc1', nn.Linear(25088, args.hidden_units)),
         ('relu', nn.ReLU()),
         ('dropout', nn.Dropout()),
         ('fc2', nn.Linear(args.hidden_units, 102)),
@@ -106,9 +106,8 @@ def train(model, epochs, print_every, device):
 
                 model.train()
     
-    save_model(model, args.save_dir)
+    save_checkpoint(model, args.arch, optimizer, args.save_dir)
     print(" --- TRAINING COMPLETED --- ")
-        
     
 def validation(model, testloader, device, criterion):
     test_loss = 0
@@ -127,11 +126,19 @@ def validation(model, testloader, device, criterion):
     return test_loss, accuracy
 
 
-def save_model(model, save_directory) :
-    model.class_to_idx = image_datasets["train"].class_to_idx
-    torch.save(model, save_directory + '/check_point.pth')
+def save_checkpoint(model, arch, optimizer, save_directory) :
+    checkpoint = {
+        'arch': arch,
+        'classifier': model.classifier,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'features': model.features,
+        'state_dict': model.state_dict(),
+        'idx_to_class': image_datasets["train"].class_to_idx
+    }
 
- 
+    torch.save(checkpoint, save_directory + '/check_point.pth')
+    
 def test_accuracy(test_loader, device):    
     correct = 0
     total = 0

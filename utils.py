@@ -16,7 +16,7 @@ def training_args():
                         help='directory to save checkpoints')
 
     # args.arch the CNN model to use for classification
-    parser.add_argument('--arch', type=str, default='vgg',
+    parser.add_argument('--arch', type=str, default='vgg16',
                         help='chosen model architecture')
 
     # args.learning_rate the rate at which the model is adapted to the problem

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 import torch
-from torchvision import transforms
+from torchvision import transforms, models
 
 import json
 import os
@@ -19,10 +19,11 @@ data_transforms =  transforms.Compose([
 ]) 
 
 args = prediction_args()
-model = torch.load(args.checkpoint)
+model = None
 
 def main():
-        
+    model = load_checkpoint(args.checkpoint)
+    
     probs, classes = predict(args.input, model, args.top_k)
 
     if args.category_names == None:
@@ -35,7 +36,25 @@ def main():
         most_likely_flower = flower_names[probs.index(max(probs))]
         
         print("There is a {:.3f} probability that this is a(n) {}".format(max(probs), most_likely_flower.title()))
-        
+  
+    
+def load_checkpoint(filepath):
+    checkpoint = torch.load(filepath)
+
+    model = getattr(models, checkpoint['arch'])(pretrained=True)
+
+    for param in model.parameters():
+        param.requires_grad = False
+    
+    model.classifier = checkpoint['classifier']
+    model.load_state_dict(checkpoint['state_dict'])
+    model.optimizer = checkpoint['optimizer']
+    model.features = checkpoint['features']
+    model.load_state_dict(checkpoint['state_dict'])
+    model.class_to_idx = checkpoint['idx_to_class']
+
+    return model
+
 
 def predict(image_path, model, topk=5):
     ''' Predict the class (or classes) of an image using a trained deep learning model.
